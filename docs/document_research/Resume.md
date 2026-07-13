@@ -28,14 +28,7 @@
 # VALIDATION RULE
 Field	Validation
 Email	Valid email format
-Phone	10-digit number
-Name	Alphabetic characters
-LinkedIn	Valid URL
-GitHub	Valid URL
 
-# OCR Challenge
-Multi-column layouts
-Tables
-Icons
+
 Small fonts
 Different resume templates
