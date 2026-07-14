@@ -9,3 +9,4 @@ class TesseractOCR:
 		return pytesseract.image_to_string(image)
 
 
+
