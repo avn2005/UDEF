@@ -1,0 +1,27 @@
+
+
+Raw OCR Text
+      │
+      ▼
+LLM Extraction Engine
+      │
+      ▼
+Extracted JSON
+      │
+      ▼
+Schema Loader
+      │
+      ▼
+JSON Schema
+      │
+      ▼
+Schema Validator
+      │
+      ├── Check required fields
+      ├── Check data types
+      ├── Check arrays
+      ├── Check unexpected fields
+      └── Generate meaningful errors
+      │
+      ▼
+Validated JSON / Error Report
