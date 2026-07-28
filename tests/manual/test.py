@@ -1,5 +1,5 @@
 import cv2
-from preprocessing.deskew import deskew_image
+from app.preprocessing.deskew import deskew_image
 
 # Load image
 img = cv2.imread("sample_img/invoice.jpeg")

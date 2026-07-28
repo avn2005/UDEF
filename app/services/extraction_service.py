@@ -3,8 +3,8 @@ from pathlib import Path
 
 from PIL import Image, UnidentifiedImageError
 
-from app.OCR.extractor import extract_text
-from llm.extractor import extract_data
+from app.ocr.extractor import extract_text
+from app.extraction.extractor import extract_data
 
 
 class ExtractionService:

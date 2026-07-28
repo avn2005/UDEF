@@ -1,9 +1,9 @@
-from email_validator import validate_email
-from phone_validator import validate_phone
-from pan_validator import validate_pan
-from aadhaar_validator import validate_aadhaar
-from gst_validator import validate_gst
-from date_validator import validate_date
+from app.validation.email_validator import validate_email
+from app.validation.phone_validator import validate_phone
+from app.validation.pan_validator import validate_pan
+from app.validation.aadhaar_validator import validate_aadhaar
+from app.validation.gst_validator import validate_gst
+from app.validation.date_validator import validate_date
 
 
 def validate_data(data):
@@ -36,7 +36,7 @@ def validate_data(data):
 
 	return errors
 
-from validator import validate_data
+from app.validation.valid import validate_data
 
 sample = {
     "email": "abc@gmail.com",
