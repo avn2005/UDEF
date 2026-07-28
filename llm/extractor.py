@@ -10,6 +10,32 @@ def _find_pattern(text: str, patterns: list[str]) -> str | None:
     return None
 
 
+def _find_pan(text: str) -> str | None:
+    match = re.search(r"\b([A-Z]{5}[0-9]{4}[A-Z])\b", text)
+    return match.group(1) if match else None
+
+
+def _find_aadhaar(text: str) -> str | None:
+    match = re.search(r"\b(\d{4})[\s-]?(\d{4})[\s-]?(\d{4})\b", text)
+    if not match:
+        return None
+    return "".join(match.groups())
+
+
+def _find_name(text: str) -> str | None:
+    name = _find_pattern(text, [r"name[:\s]*(.+)", r"full\s*name[:\s]*(.+)"])
+    if name:
+        return name
+
+    lines = [line.strip() for line in text.splitlines() if line.strip()]
+    for line in lines[:8]:
+        if re.match(r"^[A-Z][A-Z\s&\-]+$", line) and len(line.split()) >= 2:
+            return line
+        if re.match(r"^[A-Z][a-z]+(?:\s+[A-Z][a-z]+)+$", line):
+            return line
+    return None
+
+
 def _normalize_document_type(document_type: str) -> str:
     normalized = (document_type or "").strip().lower()
     normalized = normalized.replace("-", " ").replace("_", " ")
@@ -18,6 +44,12 @@ def _normalize_document_type(document_type: str) -> str:
         "id card": "id_card",
         "identity card": "id_card",
         "idcard": "id_card",
+        "aadhar": "aadhaar_card",
+        "aadhaar": "aadhaar_card",
+        "aadhar card": "aadhaar_card",
+        "aadhaar card": "aadhaar_card",
+        "pan": "pan_card",
+        "pan card": "pan_card",
         "invoice": "invoice",
         "inv": "invoice",
         "receipt": "receipt",
@@ -30,7 +62,14 @@ def extract_data(ocr_text: str, document_type: str) -> Dict[str, Any]:
     """Extract structured fields from OCR text based on document type."""
     text = ocr_text or ""
     doc_type = _normalize_document_type(document_type)
-    result: Dict[str, Any] = {"document_type": doc_type, "raw_text": text}
+    result: Dict[str, Any] = {
+        "document_type": doc_type,
+        "name": _find_name(text),
+        "pan": _find_pan(text),
+        "aadhaar": _find_aadhaar(text),
+        "date_of_birth": _find_pattern(text, [r"\b([0-9]{2}[/-][0-9]{2}[/-][0-9]{4})\b"]),
+        "raw_text": text,
+    }
 
     if doc_type == "invoice":
         result.update(
@@ -38,7 +77,7 @@ def extract_data(ocr_text: str, document_type: str) -> Dict[str, Any]:
                 "invoice_number": _find_pattern(text, [r"invoice\s*(?:no\.?|#)[:\s]*([A-Z0-9-]+)", r"(?:invoice|inv)\s*[:\s]*([A-Z0-9-]+)"]),
                 "invoice_date": _find_pattern(text, [r"(?:invoice\s*date|date)[:\s]*([0-9]{1,2}[/-][0-9]{1,2}[/-][0-9]{2,4})"]),
                 "total_amount": _find_pattern(text, [r"(?:total\s*due|amount\s*due|total)[:\s]*\$?\s*([0-9,]+\.?[0-9]{0,2})"]),
-                "vendor": _find_pattern(text, [r"(?:vendor|from|supplier)[:\s]*(.+)", r"bill\s*from[:\s]*(.+)"])
+                "vendor": _find_pattern(text, [r"(?:vendor|from|supplier)[:\s]*(.+)", r"bill\s*from[:\s]*(.+)"]),
             }
         )
     elif doc_type == "receipt":
@@ -47,7 +86,7 @@ def extract_data(ocr_text: str, document_type: str) -> Dict[str, Any]:
                 "store_name": _find_pattern(text, [r"^([A-Z][A-Z\s&\-]+)$", r"store[:\s]*(.+)"]),
                 "receipt_date": _find_pattern(text, [r"(?:date)[:\s]*([0-9]{1,2}[/-][0-9]{1,2}[/-][0-9]{2,4})"]),
                 "total_paid": _find_pattern(text, [r"(?:total\s*paid|amount\s*paid|total)[:\s]*\$?\s*([0-9,]+\.?[0-9]{0,2})"]),
-                "tax": _find_pattern(text, [r"(?:tax|sales\s*tax)[:\s]*\$?\s*([0-9,]+\.?[0-9]{0,2})"])
+                "tax": _find_pattern(text, [r"(?:tax|sales\s*tax)[:\s]*\$?\s*([0-9,]+\.?[0-9]{0,2})"]),
             }
         )
     elif doc_type == "passport":
@@ -57,20 +96,32 @@ def extract_data(ocr_text: str, document_type: str) -> Dict[str, Any]:
                 "surname": _find_pattern(text, [r"surname[:\s]*(.+)", r"last\s*name[:\s]*(.+)"]),
                 "given_names": _find_pattern(text, [r"given\s*names?[:\s]*(.+)", r"first\s*name[:\s]*(.+)"]),
                 "nationality": _find_pattern(text, [r"nationality[:\s]*(.+)"]),
-                "date_of_birth": _find_pattern(text, [r"date\s*of\s*birth[:\s]*([0-9]{1,2}[/-][0-9]{1,2}[/-][0-9]{2,4})"]),
-                "expiry_date": _find_pattern(text, [r"date\s*of\s*expiry[:\s]*([0-9]{1,2}[/-][0-9]{1,2}[/-][0-9]{2,4})", r"expiry[:\s]*([0-9]{1,2}[/-][0-9]{1,2}[/-][0-9]{2,4})"])
+                "expiry_date": _find_pattern(text, [r"date\s*of\s*expiry[:\s]*([0-9]{1,2}[/-][0-9]{1,2}[/-][0-9]{2,4})", r"expiry[:\s]*([0-9]{1,2}[/-][0-9]{1,2}[/-][0-9]{2,4})"]),
             }
         )
     elif doc_type == "id_card":
         result.update(
             {
                 "id_number": _find_pattern(text, [r"id\s*no\.?[:\s]*([A-Z0-9]+)", r"id\s*number[:\s]*([A-Z0-9]+)"]),
-                "name": _find_pattern(text, [r"name[:\s]*(.+)", r"full\s*name[:\s]*(.+)"]),
-                "date_of_birth": _find_pattern(text, [r"date\s*of\s*birth[:\s]*([0-9]{1,2}[/-][0-9]{1,2}[/-][0-9]{2,4})"]),
-                "address": _find_pattern(text, [r"address[:\s]*(.+)"])
+                "address": _find_pattern(text, [r"address[:\s]*(.+)"]),
+            }
+        )
+    elif doc_type == "pan_card":
+        result.update(
+            {
+                "pan": _find_pan(text),
+                "name": _find_name(text),
+            }
+        )
+    elif doc_type == "aadhaar_card":
+        result.update(
+            {
+                "aadhaar": _find_aadhaar(text),
+                "name": _find_name(text),
+                "address": _find_pattern(text, [r"address[:\s]*(.+)"]),
             }
         )
     else:
-        result["message"] = "Unsupported document type. Returning raw OCR text."
+        result["message"] = "Unsupported document type. Returning raw OCR text plus identity fields."
 
     return result

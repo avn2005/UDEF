@@ -1,6 +1,47 @@
+# Python virtual environments
+.venv/
 venv/
+env/
+ENV/
+
+# Python bytecode and caches
 __pycache__/
-*.pyc
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Environment and secrets
 .env
+.env.*
+*.env
+
+# IDE/editor settings
 .vscode/
 .idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Build / packaging
+build/
+dist/
+*.egg-info/
+
+# Logs
+*.log
+
+# Project-specific generated artifacts
+output/
+temp_upload.png
+temp_repro.py
+
+# Large local data / datasets (keep only if you do not want to version them)
+# data/
+# datasets/

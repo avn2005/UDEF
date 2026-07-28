@@ -1,24 +1,26 @@
+from pathlib import Path
 
-with open("reports/benchmark.md","w") as file:
+output_path = Path(__file__).resolve().parent / "reports" / "benchmark.md"
+output_path.parent.mkdir(parents=True, exist_ok=True)
 
-	file.write("# Benchmark Report\n\n")
+content = """# Benchmark Report
 
-	file.write("## OCR Comparison\n\n")
+## OCR Comparison
 
-	file.write("|OCR Engine|Accuracy|Time|\n")
-	file.write("|---|---|---|\n")
+|OCR Engine|Accuracy|Time|
+|---|---|---|
+|PaddleOCR|97%|0.82 sec|
+|EasyOCR|94%|1.15 sec|
+|Tesseract|89%|2.08 sec|
 
-	file.write("|PaddleOCR|97%|0.82 sec|\n")
-	file.write("|EasyOCR|94%|1.15 sec|\n")
-	file.write("|Tesseract|89%|2.08 sec|\n")
+## Prompt Comparison
 
-	file.write("\n")
+|Prompt|Accuracy|
+|---|---|
+|V1|90%|
+|V2|95%|
+|V3|98%|
+"""
 
-	file.write("## Prompt Comparison\n\n")
-
-	file.write("|Prompt|Accuracy|\n")
-	file.write("|---|---|\n")
-
-	file.write("|V1|90%|\n")
-	file.write("|V2|95%|\n")
-	file.write("|V3|98%|\n")
+output_path.write_text(content, encoding="utf-8")
+print(f"Report written to: {output_path}")
