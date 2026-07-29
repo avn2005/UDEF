@@ -28,3 +28,14 @@ UDEF/
 ├── requirements.txt
 ├── README.md
 └── main.py
+
+{
+    "document_type":"resume",
+    "image_path":"resume.jpg"
+}
+
+{
+    "name":"John Doe",
+    "email":"john@example.com"
+}
+

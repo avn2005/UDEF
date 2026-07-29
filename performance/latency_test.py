@@ -23,3 +23,6 @@ async def ocr(file: UploadFile = File(...)):
 image = cv2.imread(path)
 image = cv2.resize(image, (1000, 1000))
 gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+
+del image
+del result

@@ -1,3 +1,4 @@
+
 import io
 from pathlib import Path
 
@@ -19,7 +20,8 @@ class ExtractionService:
 
         temp_path = Path("temp_upload.png")
         image.save(temp_path)
-        text = extract_text(str(temp_path), engine="tesseract")
+
+        text = extract_text(str(temp_path))
         extracted = extract_data(text, document_type or "generic")
 
         return {

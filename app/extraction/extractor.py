@@ -22,17 +22,50 @@ def _find_aadhaar(text: str) -> str | None:
     return "".join(match.groups())
 
 
+def _clean_line(line: str) -> str:
+    """Strip leading/trailing non-letter noise, collapse extra spaces."""
+    line = re.sub(r"^[^A-Za-z]+", "", line)
+    line = re.sub(r"[^A-Za-z]+$", "", line)
+    return re.sub(r"\s+", " ", line).strip()
+
+
+def _extract_letter_words(line: str) -> str:
+    """Pull out only alphabetic word tokens (2+ letters) from a noisy line."""
+    words = re.findall(r"[A-Za-z]{2,}", line)
+    return " ".join(words)
+
+
+_NAME_SKIP_WORDS = {
+    "GOVERNMENT", "INDIA", "GOVT", "OFINDIA", "INCOMETAX", "INCOME", "TAX",
+    "DEPARTMENT", "PERMANENT", "ACCOUNT", "NUMBER", "SIGNATURE", "UNIQUE",
+    "IDENTIFICATION", "AUTHORITY", "AADHAAR", "ENROLMENT", "VID", "MALE",
+    "FEMALE", "DOB", "DATE", "BIRTH", "ADDRESS", "REPUBLIC",
+}
+
+
 def _find_name(text: str) -> str | None:
     name = _find_pattern(text, [r"name[:\s]*(.+)", r"full\s*name[:\s]*(.+)"])
     if name:
-        return name
+        cleaned = _clean_line(name)
+        if cleaned:
+            return cleaned
 
     lines = [line.strip() for line in text.splitlines() if line.strip()]
     for line in lines[:8]:
-        if re.match(r"^[A-Z][A-Z\s&\-]+$", line) and len(line.split()) >= 2:
-            return line
-        if re.match(r"^[A-Z][a-z]+(?:\s+[A-Z][a-z]+)+$", line):
-            return line
+        cleaned = _clean_line(line)
+
+        if re.match(r"^[A-Z][A-Z\s&\-]+$", cleaned) and len(cleaned.split()) >= 2:
+            return cleaned
+        if re.match(r"^[A-Z][a-z]+(?:\s+[A-Z][a-z]+)+$", cleaned):
+            return cleaned
+
+        # Fallback: extract clean letter-only words from noisy lines
+        letters_only = _extract_letter_words(line)
+        words = letters_only.split()
+        if len(words) >= 2 and all(w[0].isupper() or w.isupper() for w in words):
+            if not any(w.upper() in _NAME_SKIP_WORDS for w in words):
+                return letters_only
+
     return None
 
 
@@ -54,14 +87,37 @@ def _normalize_document_type(document_type: str) -> str:
         "inv": "invoice",
         "receipt": "receipt",
         "passport": "passport",
+        "driving license": "driving_license",
+        "driving licence": "driving_license",
+        "dl": "driving_license",
+        "auto": "auto",
     }
     return aliases.get(normalized, normalized.replace(" ", "_"))
+
+
+def _detect_document_type(text: str) -> str:
+    """Guess document type from OCR text patterns when document_type is 'auto'."""
+    if re.search(r"pan\s*card|income\s*tax\s*department", text, re.I) or (
+        _find_pan(text) and not re.search(r"aadhaar|passport|licen[cs]e", text, re.I)
+    ):
+        return "pan_card"
+    if re.search(r"aadhaar|uidai|unique\s*identification", text, re.I) or _find_aadhaar(text):
+        return "aadhaar_card"
+    if re.search(r"passport", text, re.I):
+        return "passport"
+    if re.search(r"driving\s*licen[cs]e|transport\s*department|dl\s*no", text, re.I):
+        return "driving_license"
+    return "generic"
 
 
 def extract_data(ocr_text: str, document_type: str) -> Dict[str, Any]:
     """Extract structured fields from OCR text based on document type."""
     text = ocr_text or ""
     doc_type = _normalize_document_type(document_type)
+
+    if doc_type == "auto":
+        doc_type = _detect_document_type(text)
+
     result: Dict[str, Any] = {
         "document_type": doc_type,
         "name": _find_name(text),
@@ -119,6 +175,13 @@ def extract_data(ocr_text: str, document_type: str) -> Dict[str, Any]:
                 "aadhaar": _find_aadhaar(text),
                 "name": _find_name(text),
                 "address": _find_pattern(text, [r"address[:\s]*(.+)"]),
+            }
+        )
+    elif doc_type == "driving_license":
+        result.update(
+            {
+                "license_number": _find_pattern(text, [r"dl\s*no\.?[:\s]*([A-Z0-9-]+)", r"licen[cs]e\s*no\.?[:\s]*([A-Z0-9-]+)"]),
+                "valid_till": _find_pattern(text, [r"valid\s*till[:\s]*([0-9]{1,2}[/-][0-9]{1,2}[/-][0-9]{2,4})"]),
             }
         )
     else:
