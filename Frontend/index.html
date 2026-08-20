@@ -1,0 +1,976 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>UDEF - Document Extraction</title>
+
+    <style>
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, Helvetica, sans-serif;
+            background: #f4f6fa;
+            color: #111827;
+        }
+
+        .container {
+            width: 90%;
+            max-width: 1250px;
+            margin: 30px auto;
+        }
+
+        h1 {
+            margin-bottom: 25px;
+            font-size: 30px;
+        }
+
+        .card {
+            background: white;
+            border: 1px solid #dfe3e8;
+            border-radius: 12px;
+            margin-bottom: 25px;
+            overflow: hidden;
+        }
+
+        .card-header {
+            padding: 20px;
+            font-size: 20px;
+            font-weight: bold;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .card-body {
+            padding: 20px;
+        }
+
+        /* Upload area */
+
+        .upload-area {
+            border: 2px dashed #cbd5e1;
+            border-radius: 10px;
+            padding: 30px;
+            text-align: center;
+            background: #f8fafc;
+            cursor: pointer;
+        }
+
+        .upload-area:hover {
+            border-color: #2563eb;
+            background: #eff6ff;
+        }
+
+        .upload-area input {
+            display: none;
+        }
+
+        .upload-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+
+        .upload-subtitle {
+            color: #64748b;
+            font-size: 14px;
+        }
+
+        /* File */
+
+        .file-info {
+            display: none;
+            margin-top: 15px;
+            padding: 12px;
+            background: #f1f5f9;
+            border-radius: 8px;
+        }
+
+        /* Select */
+
+        select {
+            width: 100%;
+            padding: 13px;
+            border: 1px solid #cbd5e1;
+            border-radius: 7px;
+            font-size: 15px;
+            background: white;
+        }
+
+        /* Button */
+
+        .extract-btn {
+            width: 100%;
+            margin-top: 20px;
+            padding: 15px;
+            border: none;
+            border-radius: 7px;
+            background: #2563eb;
+            color: white;
+            font-size: 17px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .extract-btn:hover {
+            background: #1d4ed8;
+        }
+
+        .extract-btn:disabled {
+            background: #94a3b8;
+            cursor: not-allowed;
+        }
+
+        /* Result layout */
+
+        .result-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 25px;
+        }
+
+        .preview {
+            width: 100%;
+            max-height: 600px;
+            object-fit: contain;
+            background: #f1f5f9;
+            border-radius: 5px;
+        }
+
+        /* Extracted data */
+
+        .result-box {
+            padding: 20px;
+        }
+
+        .success-box {
+            border: 1px solid #bbf7d0;
+            background: #f0fdf4;
+            border-radius: 8px;
+            padding: 18px;
+        }
+
+        .error-box {
+            border: 1px solid #fecaca;
+            background: #fef2f2;
+            color: #b91c1c;
+            border-radius: 8px;
+            padding: 18px;
+        }
+
+        .field-row {
+            display: grid;
+            grid-template-columns: 180px 1fr;
+            padding: 12px 0;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .field-name {
+            font-weight: bold;
+            color: #374151;
+        }
+
+        .field-value {
+            color: #111827;
+            word-break: break-word;
+        }
+
+        .not-available {
+            color: #9ca3af;
+        }
+
+        /* Raw OCR */
+
+        details {
+            margin-top: 20px;
+        }
+
+        summary {
+            cursor: pointer;
+            font-weight: bold;
+            color: #2563eb;
+        }
+
+        .raw-text {
+            margin-top: 12px;
+            padding: 15px;
+            background: #111827;
+            color: #e5e7eb;
+            border-radius: 7px;
+            white-space: pre-wrap;
+            word-break: break-word;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: Consolas, monospace;
+            font-size: 13px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 30px;
+            color: #64748b;
+        }
+
+        @media(max-width: 800px) {
+
+            .result-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .field-row {
+                grid-template-columns: 130px 1fr;
+            }
+
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+
+<div class="container">
+
+    <h1>Universal Document Extraction Framework</h1>
+
+
+    <!-- ========================================== -->
+    <!-- Upload -->
+    <!-- ========================================== -->
+
+    <div class="card">
+
+        <div class="card-header">
+            Upload Document
+        </div>
+
+        <div class="card-body">
+
+            <label class="upload-area">
+
+                <input
+                    type="file"
+                    id="fileInput"
+                    accept=".jpg,.jpeg,.png,.pdf"
+                >
+
+                <div class="upload-title">
+                    Click to upload document
+                </div>
+
+                <div class="upload-subtitle">
+                    JPG, JPEG, PNG or PDF
+                </div>
+
+            </label>
+
+
+            <div
+                id="fileInfo"
+                class="file-info">
+            </div>
+
+
+            <div style="margin-top:20px;">
+
+                <label>
+                    <strong>Document Type</strong>
+                </label>
+
+                <select id="documentType">
+
+                    <option value="auto">
+                        Auto Detect
+                    </option>
+
+                    <option value="aadhaar_card">
+                        Aadhaar Card
+                    </option>
+
+                    <option value="pan_card">
+                        PAN Card
+                    </option>
+
+                    <option value="passport">
+                        Passport
+                    </option>
+
+                    <option value="driving_license">
+                        Driving License
+                    </option>
+
+                    <option value="invoice">
+                        Invoice
+                    </option>
+
+                    <option value="receipt">
+                        Receipt
+                    </option>
+
+                    <option value="id_card">
+                        ID Card
+                    </option>
+
+                </select>
+
+            </div>
+
+
+            <button
+                id="extractBtn"
+                class="extract-btn"
+                onclick="extractDocument()">
+
+                Extract Document
+
+            </button>
+
+        </div>
+
+    </div>
+
+
+    <!-- ========================================== -->
+    <!-- Result -->
+    <!-- ========================================== -->
+
+    <div class="result-grid">
+
+
+        <!-- Document Preview -->
+
+        <div class="card">
+
+            <div class="card-header">
+                Document Preview
+            </div>
+
+            <div class="card-body">
+
+                <div id="previewContainer">
+
+                    <div class="loading">
+                        Upload a document to see preview
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- Extracted Data -->
+
+        <div class="card">
+
+            <div class="card-header">
+                Extracted Data
+            </div>
+
+            <div
+                id="resultContainer"
+                class="result-box">
+
+                <div class="loading">
+                    Upload and extract a document
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<script>
+
+    /*
+    =====================================================
+    IMPORTANT
+    =====================================================
+    Your FastAPI server is running on port 8001.
+    Therefore the API URL MUST be 8001.
+    */
+
+    const API_URL = "http://127.0.0.1:8001/upload";
+
+
+    const fileInput =
+        document.getElementById("fileInput");
+
+    const fileInfo =
+        document.getElementById("fileInfo");
+
+    const previewContainer =
+        document.getElementById("previewContainer");
+
+    const resultContainer =
+        document.getElementById("resultContainer");
+
+    const extractBtn =
+        document.getElementById("extractBtn");
+
+
+    /*
+    =====================================================
+    File selected
+    =====================================================
+    */
+
+    fileInput.addEventListener(
+        "change",
+        function () {
+
+            const file = this.files[0];
+
+            if (!file) {
+                return;
+            }
+
+            fileInfo.style.display = "block";
+
+            fileInfo.innerHTML = `
+                <strong>${escapeHtml(file.name)}</strong>
+                <br>
+                ${(file.size / 1024).toFixed(2)} KB
+            `;
+
+
+            /*
+            Preview image
+            */
+
+            if (file.type.startsWith("image/")) {
+
+                const imageURL =
+                    URL.createObjectURL(file);
+
+                previewContainer.innerHTML = `
+                    <img
+                        src="${imageURL}"
+                        class="preview"
+                        alt="Document Preview"
+                    >
+                `;
+
+            }
+
+            else {
+
+                previewContainer.innerHTML = `
+                    <div class="loading">
+                        PDF selected: ${escapeHtml(file.name)}
+                    </div>
+                `;
+
+            }
+
+        }
+    );
+
+
+    /*
+    =====================================================
+    Extract document
+    =====================================================
+    */
+
+    async function extractDocument() {
+
+        const file = fileInput.files[0];
+
+        const documentType =
+            document.getElementById("documentType").value;
+
+
+        if (!file) {
+
+            resultContainer.innerHTML = `
+                <div class="error-box">
+                    <strong>No document selected</strong>
+                    <p>Please upload a document first.</p>
+                </div>
+            `;
+
+            return;
+        }
+
+
+        /*
+        Disable button
+        */
+
+        extractBtn.disabled = true;
+
+        extractBtn.innerText =
+            "Extracting...";
+
+
+        resultContainer.innerHTML = `
+            <div class="loading">
+                Processing document...
+                <br><br>
+                Please wait.
+            </div>
+        `;
+
+
+        /*
+        FormData
+        */
+
+        const formData =
+            new FormData();
+
+        formData.append(
+            "file",
+            file
+        );
+
+        formData.append(
+            "document_type",
+            documentType
+        );
+
+
+        try {
+
+            console.log(
+                "Sending request to:",
+                API_URL
+            );
+
+
+            /*
+            Send request to FastAPI
+            */
+
+            const response =
+                await fetch(
+                    API_URL,
+                    {
+                        method: "POST",
+                        body: formData
+                    }
+                );
+
+
+            console.log(
+                "Response status:",
+                response.status
+            );
+
+
+            /*
+            Read response
+            */
+
+            const result =
+                await response.json();
+
+
+            console.log(
+                "FastAPI response:",
+                result
+            );
+
+
+            /*
+            Handle error response
+            */
+
+            if (!response.ok || !result.success) {
+
+                throw new Error(
+                    result.message ||
+                    result.error ||
+                    `HTTP Error ${response.status}`
+                );
+
+            }
+
+
+            /*
+            Display extracted data
+            */
+
+            displayExtractedData(result);
+
+
+        }
+
+        catch (error) {
+
+            console.error(
+                "API Error:",
+                error
+            );
+
+
+            resultContainer.innerHTML = `
+
+                <div class="error-box">
+
+                    <strong>
+                        Extraction Failed
+                    </strong>
+
+                    <p>
+                        ${escapeHtml(error.message)}
+                    </p>
+
+                    <hr>
+
+                    <p>
+                        <strong>Check:</strong>
+                    </p>
+
+                    <ul>
+
+                        <li>
+                            FastAPI is running on
+                            <strong>127.0.0.1:8001</strong>
+                        </li>
+
+                        <li>
+                            API endpoint is
+                            <strong>/upload</strong>
+                        </li>
+
+                        <li>
+                            Do not open the HTML using
+                            <strong>file://</strong>
+                        </li>
+
+                    </ul>
+
+                </div>
+
+            `;
+
+        }
+
+        finally {
+
+            extractBtn.disabled = false;
+
+            extractBtn.innerText =
+                "Extract Document";
+
+        }
+
+    }
+
+
+    /*
+    =====================================================
+    Display extracted data
+    =====================================================
+    */
+
+    function displayExtractedData(result) {
+
+        const data =
+            result.data || {};
+
+
+        const documentType =
+            formatDocumentType(
+                data.document_type ||
+                result.document_type
+            );
+
+
+        const name =
+            getValue(
+                data.name
+            );
+
+
+        const pan =
+            getValue(
+                data.pan
+            );
+
+
+        const aadhaar =
+            formatAadhaar(
+                data.aadhaar
+            );
+
+
+        const dob =
+            getValue(
+                data.date_of_birth
+            );
+
+
+        const gender =
+            getValue(
+                data.gender
+            );
+
+
+        const address =
+            getValue(
+                data.address
+            );
+
+
+        const rawText =
+            data.raw_text || "";
+
+
+        resultContainer.innerHTML = `
+
+            <div class="success-box">
+
+                <div class="field-row">
+
+                    <div class="field-name">
+                        Document Type
+                    </div>
+
+                    <div class="field-value">
+                        ${escapeHtml(documentType)}
+                    </div>
+
+                </div>
+
+
+                <div class="field-row">
+
+                    <div class="field-name">
+                        Name
+                    </div>
+
+                    <div class="field-value">
+                        ${name}
+                    </div>
+
+                </div>
+
+
+                <div class="field-row">
+
+                    <div class="field-name">
+                        PAN
+                    </div>
+
+                    <div class="field-value">
+                        ${pan}
+                    </div>
+
+                </div>
+
+
+                <div class="field-row">
+
+                    <div class="field-name">
+                        Aadhaar Number
+                    </div>
+
+                    <div class="field-value">
+                        ${aadhaar}
+                    </div>
+
+                </div>
+
+
+                <div class="field-row">
+
+                    <div class="field-name">
+                        Date of Birth
+                    </div>
+
+                    <div class="field-value">
+                        ${dob}
+                    </div>
+
+                </div>
+
+
+                <div class="field-row">
+
+                    <div class="field-name">
+                        Gender
+                    </div>
+
+                    <div class="field-value">
+                        ${gender}
+                    </div>
+
+                </div>
+
+
+                <div class="field-row">
+
+                    <div class="field-name">
+                        Address
+                    </div>
+
+                    <div class="field-value">
+                        ${address}
+                    </div>
+
+                </div>
+
+
+                ${
+                    rawText
+                    ?
+                    `
+                    <details>
+
+                        <summary>
+                            ▶ View Raw OCR Text
+                        </summary>
+
+                        <div class="raw-text">
+                            ${escapeHtml(rawText)}
+                        </div>
+
+                    </details>
+                    `
+                    :
+                    ""
+                }
+
+            </div>
+
+        `;
+
+    }
+
+
+    /*
+    =====================================================
+    Get value
+    =====================================================
+    */
+
+    function getValue(value) {
+
+        if (
+            value === null ||
+            value === undefined ||
+            value === "" ||
+            value === "null"
+        ) {
+
+            return `
+                <span class="not-available">
+                    Not available
+                </span>
+            `;
+
+        }
+
+        return escapeHtml(
+            String(value)
+        );
+
+    }
+
+
+    /*
+    =====================================================
+    Format Aadhaar
+    =====================================================
+    */
+
+    function formatAadhaar(value) {
+
+        if (
+            value === null ||
+            value === undefined ||
+            value === ""
+        ) {
+
+            return `
+                <span class="not-available">
+                    Not available
+                </span>
+            `;
+
+        }
+
+
+        const number =
+            String(value)
+                .replace(/\D/g, "");
+
+
+        if (number.length === 12) {
+
+            return escapeHtml(
+                number.substring(0, 4)
+                + " "
+                + number.substring(4, 8)
+                + " "
+                + number.substring(8, 12)
+            );
+
+        }
+
+
+        return escapeHtml(
+            String(value)
+        );
+
+    }
+
+
+    /*
+    =====================================================
+    Format document type
+    =====================================================
+    */
+
+    function formatDocumentType(value) {
+
+        if (!value) {
+            return "Not available";
+        }
+
+        return String(value)
+            .replace(/_/g, " ")
+            .replace(/\b\w/g, function (char) {
+                return char.toUpperCase();
+            });
+
+    }
+
+
+    /*
+    =====================================================
+    Prevent HTML injection
+    =====================================================
+    */
+
+    function escapeHtml(value) {
+
+        return String(value)
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+
+    }
+
+</script>
+
+
+</body>
+
+</html>
