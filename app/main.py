@@ -52,3 +52,4 @@ async def health_check():
         "frontend_path": frontend_path,
         "frontend_exists": os.path.exists(frontend_path)
     }
+
